@@ -13,6 +13,9 @@
 
 ActiveRecord::Schema.define(version: 20140418215526) do
 
+  # These are extensions that must be enabled in order to support this database
+  enable_extension "plpgsql"
+
   create_table "notes", force: :cascade do |t|
     t.string   "name"
     t.string   "text"
@@ -22,8 +25,8 @@ ActiveRecord::Schema.define(version: 20140418215526) do
     t.datetime "updated_at"
   end
 
-  add_index "notes", ["pad_id"], name: "index_notes_on_pad_id"
-  add_index "notes", ["user_id"], name: "index_notes_on_user_id"
+  add_index "notes", ["pad_id"], name: "index_notes_on_pad_id", using: :btree
+  add_index "notes", ["user_id"], name: "index_notes_on_user_id", using: :btree
 
   create_table "pads", force: :cascade do |t|
     t.string   "name"
@@ -32,7 +35,7 @@ ActiveRecord::Schema.define(version: 20140418215526) do
     t.datetime "updated_at"
   end
 
-  add_index "pads", ["user_id"], name: "index_pads_on_user_id"
+  add_index "pads", ["user_id"], name: "index_pads_on_user_id", using: :btree
 
   create_table "users", force: :cascade do |t|
     t.string   "email"
