@@ -12,6 +12,10 @@ gem 'sass-rails', '~> 4.0.0'
 gem 'uglifier', '>= 1.3.0'
 gem 'therubyracer', '~> 0.12.3'
 
+group :production, :staging do
+  gem 'rails_stdout_logging'
+end
+
 # Use CoffeeScript for .js.coffee assets and views
 gem 'coffee-rails', '~> 4.0.0'
 
