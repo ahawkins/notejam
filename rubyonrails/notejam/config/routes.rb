@@ -40,6 +40,9 @@ Rails.application.routes.draw do
   post 'forgot-password/' => 'users#forgot_password'
 
   root "notes#index"
+
+  get '/ping' => 'ping#ping'
+
   # The priority is based upon order of creation: first created -> highest priority.
   # See how all your routes lay out with "rake routes".
 
