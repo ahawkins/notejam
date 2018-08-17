@@ -1,0 +1,44 @@
+{
+  "variables": {
+
+  },
+  "builders": [{
+    "type": "amazon-ebs",
+    "region": "ap-southeast-1",
+    "source_ami_filter": {
+      "filters": {
+        "virtualization-type": "hvm",
+        "name": "ubuntu/images/*ubuntu-xenial-16.04-amd64-server-*",
+        "root-device-type": "ebs"
+      },
+      "owners": ["099720109477"],
+      "most_recent": true
+    },
+    "instance_type": "c5.large",
+    "ssh_username": "ubuntu",
+    "ami_name": "toptal-notejam {{timestamp}}"
+  }],
+  "provisioners": [{
+    "type": "shell-local",
+    "command": "git archive -v -o tmp/code.tar.gz HEAD rubyonrails/"
+  }, {
+    "type": "file",
+    "source": "tmp/code.tar.gz",
+    "destination": "/tmp/code.tar.gz"
+  }, {
+    "type": "shell",
+    "inline": "sudo apt-get update && sudo apt-get install -y software-properties-common && sudo apt-add-repository ppa:ansible/ansible && sudo apt-get update && sudo apt-get install -y ansible"
+  },{
+    "type": "ansible-local",
+    "playbook_file": "pipeline/configure-ami.yml",
+    "playbook_dir": "pipeline",
+    "extra_arguments": [
+      "--extra-vars app_archive=/tmp/code.tar.gz"
+    ]
+  }],
+  "post-processors": [{
+    "type": "manifest",
+    "output": "tmp/manifest.json",
+    "strip_path": true
+  }]
+}

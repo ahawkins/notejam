@@ -1,0 +1,248 @@
+---
+Parameters:
+  Stage:
+    Type: String
+  AMI:
+    Type: "AWS::EC2::Image::Id"
+  KeyName:
+    Type: String
+    Default: toptal
+  InstanceType:
+    Type: String
+    Default: t2.medium
+  ApplicationPort:
+    Type: Number
+    Default: 8080
+  DBUser:
+    Type: String
+    Default: notejam
+  DBPassword:
+    Type: String
+    Default: toptal12345678
+  DBPort:
+    Type: Number
+    Default: 5432
+  DBName:
+    Type: String
+    Default: app
+  PingPath:
+    Type: String
+    Default: /ping
+Resources:
+  VPC:
+    Type: "AWS::EC2::VPC"
+    Properties:
+      CidrBlock: "192.168.0.0/16"
+  InternetGateway:
+    Type: "AWS::EC2::InternetGateway"
+  GatewayAttachment:
+    Type: "AWS::EC2::VPCGatewayAttachment"
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+  SubnetA:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      VpcId: !Ref VPC
+      MapPublicIpOnLaunch: true
+      CidrBlock: "192.168.1.0/24"
+      AvailabilityZone: !Select
+        - 0
+        - Fn::GetAZs: !Ref 'AWS::Region'
+  SubnetB:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      VpcId: !Ref VPC
+      MapPublicIpOnLaunch: true
+      CidrBlock: "192.168.2.0/24"
+      AvailabilityZone: !Select
+        - 1
+        - Fn::GetAZs: !Ref 'AWS::Region'
+  RouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref VPC
+  InternetRoute:
+    Type: "AWS::EC2::Route"
+    DependsOn: GatewayAttachment
+    Properties:
+      RouteTableId: !Ref RouteTable
+      DestinationCidrBlock: '0.0.0.0/0'
+      GatewayId: !Ref InternetGateway
+  SubnetARouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref SubnetA
+      RouteTableId: !Ref RouteTable
+  SubnetBRouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref SubnetB
+      RouteTableId: !Ref RouteTable
+  LoadBalancerSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: "LoadBalancer security group"
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: TCP
+          FromPort: 80
+          ToPort: 80
+          CidrIp: "0.0.0.0/0"
+        - IpProtocol: TCP
+          FromPort: !Ref ApplicationPort
+          ToPort: !Ref ApplicationPort
+          CidrIp: "0.0.0.0/0"
+  ServerSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: "Server security group"
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: TCP
+          FromPort: 22
+          ToPort: 22
+          CidrIp: "0.0.0.0/0"
+        - IpProtocol: TCP
+          FromPort: !Ref ApplicationPort
+          ToPort: !Ref ApplicationPort
+          SourceSecurityGroupId: !GetAtt LoadBalancerSecurityGroup.GroupId
+  LoadBalancer:
+    Type: "AWS::ElasticLoadBalancingV2::LoadBalancer"
+    Properties:
+      Scheme: internet-facing
+      Type: application
+      Subnets:
+        - !Ref SubnetA
+        - !Ref SubnetB
+      SecurityGroups:
+        - !GetAtt LoadBalancerSecurityGroup.GroupId
+  IAMRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "ec2.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/PowerUserAccess
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref IAMRole
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 30
+      HealthCheckProtocol: HTTP
+      HealthCheckPath: !Ref PingPath
+      HealthCheckTimeoutSeconds: 2
+      HealthyThresholdCount: 4
+      Matcher:
+        HttpCode: 200
+      Port: !Ref ApplicationPort
+      Protocol: HTTP
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: '20'
+      UnhealthyThresholdCount: 3
+      VpcId:
+        Ref: VPC
+  Listener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: 80
+      Protocol: HTTP
+  DBSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: "DB security group"
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: TCP
+          FromPort: !Ref DBPort
+          ToPort: !Ref DBPort
+          SourceSecurityGroupId: !GetAtt ServerSecurityGroup.GroupId
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: "Subnets available for the RDS DB Instance"
+      SubnetIds:
+        - !Ref SubnetA
+        - !Ref SubnetB
+  MyDB:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      Engine: postgres
+      EngineVersion: "9.6.9"
+      DBInstanceClass: db.m4.large
+      AllocatedStorage: 100
+      MasterUsername: !Ref DBUser
+      MasterUserPassword: !Ref DBPassword
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      Port: !Ref DBPort
+      VPCSecurityGroups:
+        - !Ref DBSecurityGroup
+  LaunchTemplate:
+    Type: "AWS::EC2::LaunchTemplate"
+    Properties:
+        LaunchTemplateName: !Ref Stage
+        LaunchTemplateData:
+          ImageId: !Ref AMI
+          InstanceType: !Ref InstanceType
+          KeyName: !Ref KeyName
+          SecurityGroupIds:
+            - !GetAtt ServerSecurityGroup.GroupId
+          IamInstanceProfile:
+            Name: !Ref InstanceProfile
+          UserData:
+            Fn::Base64: !Sub |
+              #!/usr/bin/env bash
+              echo "RAILS_ENV=${Stage}" > /etc/default/app
+              echo "PORT=${ApplicationPort}" >> /etc/default/app
+              echo "RAILS_SERVE_STATIC_FILES=true" >> /etc/default/app
+              echo "DATABASE_URL=postgres://${DBUser}:${DBPassword}@${MyDB.Endpoint.Address}:${MyDB.Endpoint.Port}/${DBName}" >> /etc/default/app
+
+              pushd /opt/app
+              env \
+                "RAILS_ENV=${Stage}" \
+                "DATABASE_URL=postgres://${DBUser}:${DBPassword}@${MyDB.Endpoint.Address}:${MyDB.Endpoint.Port}/${DBName}" \
+                bundle exec rake db:create
+              env \
+                "RAILS_ENV=${Stage}" \
+                "DATABASE_URL=postgres://${DBUser}:${DBPassword}@${MyDB.Endpoint.Address}:${MyDB.Endpoint.Port}/${DBName}" \
+                bundle exec rake db:migrate
+              popd
+
+              systemctl start app
+  ServerGroup:
+    Type: "AWS::AutoScaling::AutoScalingGroup"
+    Properties:
+      AvailabilityZones:
+        - !GetAtt SubnetA.AvailabilityZone
+        - !GetAtt SubnetB.AvailabilityZone
+      MinSize: 1
+      MaxSize: 1
+      LaunchTemplate:
+        LaunchTemplateId: !Ref LaunchTemplate
+        Version: !GetAtt LaunchTemplate.LatestVersionNumber
+      TargetGroupARNs:
+        - !Ref TargetGroup
+      VPCZoneIdentifier:
+        - !Ref SubnetA
+        - !Ref SubnetB
+
+Outputs:
+  DNSName:
+    Description: "Public Application URL"
+    Value: !GetAtt LoadBalancer.DNSName

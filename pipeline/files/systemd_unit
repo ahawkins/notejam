@@ -1,0 +1,23 @@
+[Unit]
+Description=App
+After=network.target
+
+[Service]
+PIDFile=/tmp/app.pid
+Restart=on-failure
+User={{ app_user }}
+Group={{ app_user }}
+EnvironmentFile=/etc/default/app
+WorkingDirectory={{ app_dir }}
+ExecStart=/usr/local/bin/bundle exec rails s -p $PORT -b 0.0.0.0
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=process
+KillSignal=SIGQUIT
+SendSIGKILL=yes
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=app
+LimitNOFILE=infinity
+
+[Install]
+WantedBy=multi-user.target

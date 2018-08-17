@@ -1,0 +1,23 @@
+---
+- hosts: localhost
+  connection: local
+  tasks:
+    - name: Deploy CloudFormation stack
+      cloudformation:
+        state: present
+        stack_name: "toptal-project-{{ stage }}"
+        region: "{{ region }}"
+        template: cloudformation.yml
+        template_parameters:
+          Stage: "{{ stage }}"
+          AMI: "{{ ami }}"
+      register: stack
+
+    - name: Test deployment
+      uri:
+        url: "http://{{ stack.stack_outputs.DNSName }}"
+        method: GET
+      register: result
+      until: 'result.status == 200'
+      retries: 10
+      delay: 30

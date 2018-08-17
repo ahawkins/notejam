@@ -1,0 +1,97 @@
+---
+- name: Build AMI
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    app_dir: /opt/app
+    app_user: app
+    packages:
+      - unzip
+      - nginx
+      - ruby
+      - ruby-dev
+      - build-essential
+      - libxslt-dev
+      - libxml2-dev
+      - zlib1g-dev
+      - libpq-dev
+  tasks:
+    - name: Install apt packages
+      apt:
+        state: present
+        name: "{{ item }}"
+      loop: "{{ packages }}"
+      become: true
+
+    - name: Greate app group
+      group:
+        state: present
+        name: "{{ app_user }}"
+      become: true
+
+    - name: Create app user
+      user:
+        state: present
+        name: "{{ app_user }}"
+        groups: "{{ app_user }}"
+        shell: /sbin/nologin
+      become: true
+
+    - name: Create app directory
+      file:
+        state: directory
+        path: "{{ app_dir }}"
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+      become: true
+
+    - name: Extract app code
+      unarchive:
+        copy: false
+        src: "{{ app_archive }}"
+        dest: "{{ app_dir }}"
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        extra_opts:
+          - '--strip-components=2'
+      become: true
+
+    - name: Install bundler
+      gem:
+        state: present
+        name: bundler
+        user_install: false
+      become: true
+
+    - name: Bundle dependencies
+      bundler:
+        state: present
+        chdir: "{{ app_dir }}"
+        deployment_mode: true
+        exclude_groups:
+          - development
+          - test
+        gem_path: vendor/bundle
+      become: true
+      become_user: "{{ app_user }}"
+
+    - name: Precompile assets
+      command: bundle exec rake assets:precompile
+      args:
+        chdir: "{{ app_dir }}"
+      become: true
+      become_user: "{{ app_user }}"
+
+    - name: Create systemd unit
+      template:
+        src: files/systemd_unit
+        dest: /etc/systemd/system/app.service
+      become: true
+
+    - name: Run nginx at startup
+      systemd:
+        state: started
+        enabled: true
+        name: nginx
+      become: true

@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+main() {
+	local region ami
+
+	region="$(jq -re '.builds | last | .artifact_id' "${1}" | cut -d ':' -f 1)"
+	ami="$(jq -re '.builds | last | .artifact_id' "${1}" | cut -d ':' -f 2)"
+
+	echo "Deploying ${ami} to ${region}"
+
+	exec ansible-playbook pipeline/deploy-stack.yml \
+		--extra-vars "ami=${ami}" \
+		--extra-vars "region=${region}" \
+		--extra-vars "stage=production"
+}
+
+main "$@"
