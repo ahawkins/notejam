@@ -96,6 +96,9 @@ jobs:
       - run:
           name: Deploy CloudFormation Stack
           command: script/deploy tmp/manifest.json staging
+          # Initial deploys take can a long time
+          no_output_timeout: 30m
+
   deploy_production:
     docker:
       - image: circleci/python:2.7
@@ -115,6 +118,8 @@ jobs:
       - run:
           name: Deploy CloudFormation Stack
           command: script/deploy tmp/manifest.json production
+          # Initial deploys take can a long time
+          no_output_timeout: 30m
 
 workflows:
   version: 2
