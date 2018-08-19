@@ -126,6 +126,6 @@ workflows:
           requires:
             - deploy_staging
       - deploy_production:
-          type: approval
           requires:
             - hold
+          context: AWS
