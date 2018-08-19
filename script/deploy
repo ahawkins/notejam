@@ -8,12 +8,14 @@ main() {
 	region="$(jq -re '.builds | last | .artifact_id' "${1}" | cut -d ':' -f 1)"
 	ami="$(jq -re '.builds | last | .artifact_id' "${1}" | cut -d ':' -f 2)"
 
-	echo "Deploying ${ami} to ${region}"
+	local stage="${2:-staging}"
+
+	echo "Deploying ${ami} to ${stage} in ${region}"
 
 	exec ansible-playbook pipeline/deploy-stack.yml \
 		--extra-vars "ami=${ami}" \
 		--extra-vars "region=${region}" \
-		--extra-vars "stage=production"
+		--extra-vars "stage=${stage}"
 }
 
 main "$@"
