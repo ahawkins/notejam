@@ -5,8 +5,11 @@ set -euo pipefail
 main() {
 	mkdir -p tmp
 
+	echo '~~~ Building code archive'
 	git archive -v -o tmp/code.tar.gz HEAD rubyonrails/notejam
-	packer build pipeline/packer.json
+
+	echo '~~~ Building AMI w/packer'
+	packer build -var 'code_archive=tmp/code.tar.gz' pipeline/packer.json
 }
 
 main "$@"

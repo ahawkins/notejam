@@ -19,11 +19,8 @@
     "ami_name": "toptal-notejam {{timestamp}}"
   }],
   "provisioners": [{
-    "type": "shell-local",
-    "command": "git archive -v -o tmp/code.tar.gz HEAD rubyonrails/"
-  }, {
     "type": "file",
-    "source": "tmp/code.tar.gz",
+    "source": "{{ user `code_archive` }}",
     "destination": "/tmp/code.tar.gz"
   }, {
     "type": "shell",
