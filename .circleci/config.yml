@@ -48,7 +48,7 @@ jobs:
           command: bundle exec rake test
           working_directory: ~/repo/rubyonrails/notejam
 
-  build:
+  deploy:
     docker:
       - image: circleci/ruby:2.3
 
@@ -69,12 +69,14 @@ jobs:
       - store_artifacts:
           path: tmp/manifest.json
 
+      - run: script/deploy tmp/manifest.json staging
+
 workflows:
   version: 2
   test_and_deploy:
     jobs:
       - test
-      - build:
+      - deploy:
           requires:
             - test
           context: AWS
