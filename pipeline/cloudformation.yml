@@ -25,6 +25,8 @@ Parameters:
   AppName:
     Type: String
     Default: notejam
+Conditions:
+  IsProduction: !Equals [ !Ref Stage, "production" ]
 Resources:
   VPC:
     Type: "AWS::EC2::VPC"
@@ -232,6 +234,10 @@ Resources:
               systemctl start app
   ServerGroup:
     Type: "AWS::AutoScaling::AutoScalingGroup"
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        MaxBatchSize: 2
+        MinInstancesInService: !If [ IsProduction, 1, 0 ]
     Properties:
       AvailabilityZones:
         - !GetAtt SubnetA.AvailabilityZone
