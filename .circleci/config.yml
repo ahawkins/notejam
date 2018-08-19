@@ -50,12 +50,16 @@ jobs:
 
   build:
     docker:
-      - image: circleci/ruby:2.3
+      - image: circleci/python:2.7
 
     working_directory: ~/repo
 
     steps:
       - checkout
+      - run:
+          name: Install AWS CLI
+          command: sudo pip install awscli
+
       - run:
           name: Download packer
           command: curl -sSL https://releases.hashicorp.com/packer/1.2.5/packer_1.2.5_linux_amd64.zip > packer.zip
@@ -83,7 +87,7 @@ jobs:
       - checkout
       - run:
           name: Install Ansible
-          command: pip install ansible boto3
+          command: pip install ansible boto3 awscli
 
       - run:
           name: Get Packer Manifest
