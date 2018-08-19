@@ -4,6 +4,8 @@ set -euo pipefail
 
 main() {
 	mkdir -p tmp
+
+	git archive -v -o tmp/code.tar.gz HEAD rubyonrails/notejam
 	packer build pipeline/packer.json
 }
 
