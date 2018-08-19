@@ -75,7 +75,7 @@ jobs:
 
       - run:
           name: Store artifact in s3
-          command: aws s3 cp tmp/manifest.json "s3://ahawkins-toptal-notejam/${CIRCLE_BUILD_NUM}/manifest.json"
+          command: aws --region ap-southeast-1 s3 cp tmp/manifest.json "s3://ahawkins-toptal-notejam/${CIRCLE_BUILD_NUM}/manifest.json"
 
   deploy_staging:
     docker:
