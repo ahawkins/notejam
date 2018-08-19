@@ -13,21 +13,18 @@ Parameters:
   ApplicationPort:
     Type: Number
     Default: 8080
-  DBUser:
-    Type: String
-    Default: notejam
   DBPassword:
     Type: String
     Default: toptal12345678
   DBPort:
     Type: Number
     Default: 5432
-  DBName:
-    Type: String
-    Default: app
   PingPath:
     Type: String
     Default: /ping
+  AppName:
+    Type: String
+    Default: notejam
 Resources:
   VPC:
     Type: "AWS::EC2::VPC"
@@ -187,7 +184,7 @@ Resources:
       EngineVersion: "9.6.9"
       DBInstanceClass: db.m4.large
       AllocatedStorage: 100
-      MasterUsername: !Ref DBUser
+      MasterUsername: !Ref AppName
       MasterUserPassword: !Ref DBPassword
       DBSubnetGroupName: !Ref DBSubnetGroup
       Port: !Ref DBPort
@@ -196,7 +193,7 @@ Resources:
   LaunchTemplate:
     Type: "AWS::EC2::LaunchTemplate"
     Properties:
-        LaunchTemplateName: !Ref Stage
+        LaunchTemplateName: !Sub "${AppName}-${Stage}"
         LaunchTemplateData:
           ImageId: !Ref AMI
           InstanceType: !Ref InstanceType
@@ -205,22 +202,30 @@ Resources:
             - !GetAtt ServerSecurityGroup.GroupId
           IamInstanceProfile:
             Name: !Ref InstanceProfile
+          TagSpecifications:
+            - ResourceType: instance
+              Tags:
+                - Key: Name
+                  Value: !Sub "${AppName}-${Stage}-app"
           UserData:
             Fn::Base64: !Sub |
               #!/usr/bin/env bash
+              echo 'log_group = "/app/${AppName}/${Stage}"' >> /etc/systemd-cloudwatch.conf
+              systemctl enable journald-cloudwatch-logs
+
               echo "RAILS_ENV=${Stage}" > /etc/default/app
               echo "PORT=${ApplicationPort}" >> /etc/default/app
               echo "RAILS_SERVE_STATIC_FILES=true" >> /etc/default/app
-              echo "DATABASE_URL=postgres://${DBUser}:${DBPassword}@${MyDB.Endpoint.Address}:${MyDB.Endpoint.Port}/${DBName}" >> /etc/default/app
+              echo "DATABASE_URL=postgres://${AppName}:${DBPassword}@${MyDB.Endpoint.Address}:${MyDB.Endpoint.Port}/${AppName}" >> /etc/default/app
 
               pushd /opt/app
               env \
                 "RAILS_ENV=${Stage}" \
-                "DATABASE_URL=postgres://${DBUser}:${DBPassword}@${MyDB.Endpoint.Address}:${MyDB.Endpoint.Port}/${DBName}" \
+                "DATABASE_URL=postgres://${AppName}:${DBPassword}@${MyDB.Endpoint.Address}:${MyDB.Endpoint.Port}/${AppName}" \
                 bundle exec rake db:create
               env \
                 "RAILS_ENV=${Stage}" \
-                "DATABASE_URL=postgres://${DBUser}:${DBPassword}@${MyDB.Endpoint.Address}:${MyDB.Endpoint.Port}/${DBName}" \
+                "DATABASE_URL=postgres://${AppName}:${DBPassword}@${MyDB.Endpoint.Address}:${MyDB.Endpoint.Port}/${AppName}" \
                 bundle exec rake db:migrate
               popd
 
@@ -232,7 +237,7 @@ Resources:
         - !GetAtt SubnetA.AvailabilityZone
         - !GetAtt SubnetB.AvailabilityZone
       MinSize: 1
-      MaxSize: 1
+      MaxSize: 2
       LaunchTemplate:
         LaunchTemplateId: !Ref LaunchTemplate
         Version: !GetAtt LaunchTemplate.LatestVersionNumber

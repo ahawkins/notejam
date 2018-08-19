@@ -6,9 +6,9 @@
   vars:
     app_dir: /opt/app
     app_user: app
+    systemd_cloudwatch_version: 0.2.1
     packages:
       - unzip
-      - nginx
       - ruby
       - ruby-dev
       - build-essential
@@ -89,9 +89,15 @@
         dest: /etc/systemd/system/app.service
       become: true
 
-    - name: Run nginx at startup
-      systemd:
-        state: started
-        enabled: true
-        name: nginx
+    - name: Create journald-cloudwatch-logs systemd unit
+      template:
+        src: files/log_unit
+        dest: /etc/systemd/system/journald-cloudwatch-logs.service
+      become: true
+
+    - name: Install systemd-cloudwatch-logs
+      get_url:
+        url: "https://github.com/advantageous/systemd-cloud-watch/releases/download/v{{ systemd_cloudwatch_version }}/systemd-cloud-watch_linux"
+        dest: /usr/local/bin/systemd-cloudwatch
+        mode: u=rwx,g=rx,o=rx
       become: true
