@@ -16,6 +16,8 @@
       - libxml2-dev
       - zlib1g-dev
       - libpq-dev
+      - libwww-perl
+      - libdatetime-perl
   tasks:
     - name: Install apt packages
       apt:
@@ -106,4 +108,19 @@
         url: "https://github.com/advantageous/systemd-cloud-watch/releases/download/v{{ systemd_cloudwatch_version }}/systemd-cloud-watch_linux"
         dest: /usr/local/bin/systemd-cloudwatch
         mode: u=rwx,g=rx,o=rx
+      become: true
+
+    - name: Get CloudWatch monitoring script
+      unarchive:
+        remote_src: true
+        src: https://aws-cloudwatch.s3.amazonaws.com/downloads/CloudWatchMonitoringScripts-1.2.2.zip
+        dest: /opt
+      become: true
+
+    - name: Add monitoring cron job
+      cron:
+        state: present
+        name: Report metrics
+        minute: "*/5"
+        job: /opt/aws-scripts-mon/mon-put-instance-data.pl --mem-util --disk-util --auto-scaling --cron --verbose
       become: true
