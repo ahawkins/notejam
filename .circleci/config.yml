@@ -3,11 +3,47 @@ jobs:
   build:
     docker:
       - image: circleci/ruby:2.3
+      - image: circleci/postgres:9.4
+        environment:
+          POSTGRES_USER: ci
+          POSTGRES_DB: ci
 
     working_directory: ~/repo
 
     steps:
+      - run:
+          name: Setup Environment Variables
+          command: |
+            echo 'export TEST_DATABASE_URL=postgres://ci@localhost:5432/ci' >> $BASH_ENV
+            echo 'export RAILS_ENV=test' >> $BASH_ENV
+
       - checkout
 
-      - run: echo 'Done'
+      # Download and cache dependencies
+      - restore_cache:
+          keys:
+          - v1-dependencies-{{ checksum "rubyonrails/notejam/Gemfile.lock" }}
+          # fallback to using the latest cache if no exact match is found
+          - v1-dependencies-
 
+      - run:
+          name: install dependencies
+          command: bundle install --jobs=4 --retry=3 --path vendor/bundle
+          working_directory: ~/repo/rubyonrails/notejam
+
+      - save_cache:
+          paths:
+            - ./rubyonrails/notejam/vendor/bundle
+          key: v1-dependencies-{{ checksum "rubyonrails/notejam/Gemfile.lock" }}
+
+      # Database setup
+      - run:
+          name: Setup DB
+          command: bundle exec rake db:schema:load
+          working_directory: ~/repo/rubyonrails/notejam
+
+      # run tests!
+      - run:
+          name: run tests
+          command: bundle exec rake test
+          working_directory: ~/repo/rubyonrails/notejam
