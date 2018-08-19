@@ -88,6 +88,21 @@ jobs:
       - run:
           name: Deploy CloudFormation Stack
           command: script/deploy tmp/manifest.json staging
+  deploy_production:
+    docker:
+      - image: circleci/ruby:2.3
+
+    working_directory: ~/repo
+
+    steps:
+      - checkout
+      - run:
+          name: Get Packer Manifest
+          command: aws s3 cp "s3://ahawkins-toptal-notejam/${CIRCLE_BUILD_NUM}/manifest.json" tmp/manifest.json
+
+      - run:
+          name: Deploy CloudFormation Stack
+          command: script/deploy tmp/manifest.json production
 
 workflows:
   version: 2
@@ -102,3 +117,11 @@ workflows:
           requires:
             - build
           context: AWS
+      - hold:
+          type: approval
+          requires:
+            - deploy_staging
+      - deploy_production:
+          type: approval
+          requires:
+            - hold
