@@ -75,7 +75,7 @@ jobs:
 
       - run:
           name: Store artifact in s3
-          command: aws --region ap-southeast-1 s3 cp tmp/manifest.json "s3://ahawkins-toptal-notejam/${CIRCLE_BUILD_NUM}/manifest.json"
+          command: aws --region ap-southeast-1 s3 cp tmp/manifest.json "s3://ahawkins-toptal-notejam/${CIRCLE_SHA1}/manifest.json"
 
   deploy_staging:
     docker:
@@ -91,7 +91,7 @@ jobs:
 
       - run:
           name: Get Packer Manifest
-          command: aws --region ap-southeast-1 s3 cp "s3://ahawkins-toptal-notejam/${CIRCLE_BUILD_NUM}/manifest.json" tmp/manifest.json
+          command: aws --region ap-southeast-1 s3 cp "s3://ahawkins-toptal-notejam/${CIRCLE_SHA1}/manifest.json" tmp/manifest.json
 
       - run:
           name: Deploy CloudFormation Stack
@@ -106,7 +106,7 @@ jobs:
       - checkout
       - run:
           name: Get Packer Manifest
-          command: aws --region ap-southeast-1 s3 cp "s3://ahawkins-toptal-notejam/${CIRCLE_BUILD_NUM}/manifest.json" tmp/manifest.json
+          command: aws --region ap-southeast-1 s3 cp "s3://ahawkins-toptal-notejam/${CIRCLE_SHA1}/manifest.json" tmp/manifest.json
 
       - run:
           name: Deploy CloudFormation Stack
