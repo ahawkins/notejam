@@ -75,12 +75,16 @@ jobs:
 
   deploy_staging:
     docker:
-      - image: circleci/ruby:2.3
+      - image: circleci/python:2.7
 
     working_directory: ~/repo
 
     steps:
       - checkout
+      - run:
+          name: Install Ansible
+          command: pip install ansible boto3
+
       - run:
           name: Get Packer Manifest
           command: aws s3 cp "s3://ahawkins-toptal-notejam/${CIRCLE_BUILD_NUM}/manifest.json" tmp/manifest.json
@@ -90,7 +94,7 @@ jobs:
           command: script/deploy tmp/manifest.json staging
   deploy_production:
     docker:
-      - image: circleci/ruby:2.3
+      - image: circleci/python:2.7
 
     working_directory: ~/repo
 
