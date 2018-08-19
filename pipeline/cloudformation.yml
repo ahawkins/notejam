@@ -287,7 +287,7 @@ Resources:
     Properties:
       EvaluationPeriods: 5
       Statistic: Average
-      Threshold: 180
+      Threshold: 20
       AlarmDescription: Alarm if CPU under utilized
       Period: '60'
       AlarmActions:
