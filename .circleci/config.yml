@@ -87,7 +87,7 @@ jobs:
       - checkout
       - run:
           name: Install Ansible
-          command: pip install ansible boto3 awscli
+          command: sudo pip install ansible boto3 awscli
 
       - run:
           name: Get Packer Manifest
@@ -104,6 +104,10 @@ jobs:
 
     steps:
       - checkout
+      - run:
+          name: Install Ansible
+          command: sudo pip install ansible boto3 awscli
+
       - run:
           name: Get Packer Manifest
           command: aws --region ap-southeast-1 s3 cp "s3://ahawkins-toptal-notejam/${CIRCLE_SHA1}/manifest.json" tmp/manifest.json
