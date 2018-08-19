@@ -66,6 +66,9 @@ jobs:
 
       - run: script/build
 
+      - store_artifacts:
+          path: tmp/manifest.json
+
 workflows:
   version: 2
   test_and_deploy:
