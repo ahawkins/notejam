@@ -26,12 +26,6 @@
       loop: "{{ packages }}"
       become: true
 
-    - name: Create nobody group
-      group:
-        state: present
-        name: nobody
-      become: true
-
     - name: Greate app group
       group:
         state: present
