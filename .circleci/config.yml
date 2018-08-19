@@ -87,7 +87,7 @@ jobs:
 
       - run:
           name: Get Packer Manifest
-          command: aws s3 cp "s3://ahawkins-toptal-notejam/${CIRCLE_BUILD_NUM}/manifest.json" tmp/manifest.json
+          command: aws --region ap-southeast-1 s3 cp "s3://ahawkins-toptal-notejam/${CIRCLE_BUILD_NUM}/manifest.json" tmp/manifest.json
 
       - run:
           name: Deploy CloudFormation Stack
@@ -102,7 +102,7 @@ jobs:
       - checkout
       - run:
           name: Get Packer Manifest
-          command: aws s3 cp "s3://ahawkins-toptal-notejam/${CIRCLE_BUILD_NUM}/manifest.json" tmp/manifest.json
+          command: aws --region ap-southeast-1 s3 cp "s3://ahawkins-toptal-notejam/${CIRCLE_BUILD_NUM}/manifest.json" tmp/manifest.json
 
       - run:
           name: Deploy CloudFormation Stack
