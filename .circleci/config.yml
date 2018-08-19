@@ -48,7 +48,7 @@ jobs:
           command: bundle exec rake test
           working_directory: ~/repo/rubyonrails/notejam
 
-  deploy:
+  build:
     docker:
       - image: circleci/ruby:2.3
 
@@ -69,14 +69,36 @@ jobs:
       - store_artifacts:
           path: tmp/manifest.json
 
-      - run: script/deploy tmp/manifest.json staging
+      - run:
+          name: Store artifact in s3
+          command: aws s3 cp tmp/manifest.json "s3://ahawkins-toptal-notejam/${CIRCLE_BUILD_NUM}/manifest.json"
+
+  deploy_staging:
+    docker:
+      - image: circleci/ruby:2.3
+
+    working_directory: ~/repo
+
+    steps:
+      - checkout
+      - run:
+          name: Get Packer Manifest
+          command: aws s3 cp "s3://ahawkins-toptal-notejam/${CIRCLE_BUILD_NUM}/manifest.json" tmp/manifest.json
+
+      - run:
+          name: Deploy CloudFormation Stack
+          command: script/deploy tmp/manifest.json staging
 
 workflows:
   version: 2
   test_and_deploy:
     jobs:
       - test
-      - deploy:
+      - build:
           requires:
             - test
+          context: AWS
+      - deploy_staging:
+          requires:
+            - build
           context: AWS
