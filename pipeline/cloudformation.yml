@@ -211,7 +211,7 @@ Resources:
             Fn::Base64: !Sub |
               #!/usr/bin/env bash
               echo 'log_group = "/app/${AppName}/${Stage}"' >> /etc/systemd-cloudwatch.conf
-              systemctl enable journald-cloudwatch-logs
+              systemctl start journald-cloudwatch-logs
 
               echo "RAILS_ENV=${Stage}" > /etc/default/app
               echo "PORT=${ApplicationPort}" >> /etc/default/app
