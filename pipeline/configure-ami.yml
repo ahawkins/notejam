@@ -116,5 +116,5 @@
         state: present
         name: Report metrics
         minute: "*/5"
-        job: /opt/aws-scripts-mon/mon-put-instance-data.pl --mem-util --disk-util --auto-scaling --cron --verbose
+        job: /opt/aws-scripts-mon/mon-put-instance-data.pl --mem-util --disk-space-util --disk-path=/dev/xvda1 --auto-scaling --from-cron --verbose
       become: true
