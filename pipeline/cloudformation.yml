@@ -16,6 +16,7 @@ Parameters:
   DBPassword:
     Type: String
     Default: toptal12345678
+    NoEcho: true
   DBPort:
     Type: Number
     Default: 5432
