@@ -45,7 +45,7 @@ Resources:
     Type: "AWS::EC2::Subnet"
     Properties:
       VpcId: !Ref VPC
-      MapPublicIpOnLaunch: true
+      MapPublicIpOnLaunch: false
       CidrBlock: "192.168.1.0/24"
       AvailabilityZone: !Select
         - 0
@@ -54,10 +54,19 @@ Resources:
     Type: "AWS::EC2::Subnet"
     Properties:
       VpcId: !Ref VPC
-      MapPublicIpOnLaunch: true
+      MapPublicIpOnLaunch: false
       CidrBlock: "192.168.2.0/24"
       AvailabilityZone: !Select
         - 1
+        - Fn::GetAZs: !Ref 'AWS::Region'
+  BastionSubnet:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      VpcId: !Ref VPC
+      MapPublicIpOnLaunch: true
+      CidrBlock: "192.168.3.0/24"
+      AvailabilityZone: !Select
+        - 0
         - Fn::GetAZs: !Ref 'AWS::Region'
   RouteTable:
     Type: 'AWS::EC2::RouteTable'
@@ -80,6 +89,11 @@ Resources:
     Properties:
       SubnetId: !Ref SubnetB
       RouteTableId: !Ref RouteTable
+  BastionRouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref BastionSubnet
+      RouteTableId: !Ref RouteTable
   LoadBalancerSecurityGroup:
     Type: "AWS::EC2::SecurityGroup"
     Properties:
@@ -94,6 +108,16 @@ Resources:
           FromPort: !Ref ApplicationPort
           ToPort: !Ref ApplicationPort
           CidrIp: "0.0.0.0/0"
+  BastionSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: "Bastion security group"
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: TCP
+          FromPort: 22
+          ToPort: 22
+          CidrIp: "0.0.0.0/0"
   ServerSecurityGroup:
     Type: "AWS::EC2::SecurityGroup"
     Properties:
@@ -103,7 +127,7 @@ Resources:
         - IpProtocol: TCP
           FromPort: 22
           ToPort: 22
-          CidrIp: "0.0.0.0/0"
+          SourceSecurityGroupId: !GetAtt BastionSecurityGroup.GroupId
         - IpProtocol: TCP
           FromPort: !Ref ApplicationPort
           ToPort: !Ref ApplicationPort
@@ -300,8 +324,24 @@ Resources:
           Value: !Ref ServerGroup
       ComparisonOperator: LessThanThreshold
       MetricName: CPUUtilization
+  Bastion:
+    Type: AWS::EC2::Instance
+    Properties:
+      SubnetId: !Ref BastionSubnet
+      InstanceType: t2.nano
+      ImageId: ami-03221428e6676db69
+      KeyName: !Ref KeyName
+      SecurityGroupIds:
+        - !GetAtt BastionSecurityGroup.GroupId
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppName}-${Stage}-bastion"
+
 
 Outputs:
   DNSName:
     Description: "Public Application URL"
     Value: !GetAtt LoadBalancer.DNSName
+  BastionIP:
+    Description: "SSH Bastion IP"
+    Value: !GetAtt Bastion.PublicIp
